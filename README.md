@@ -8,6 +8,7 @@ A Go server that proxies GitHub Copilot as an OpenAI/Anthropic-compatible API.
 
 - OpenAI-compatible endpoints:
   - `POST /v1/chat/completions`
+  - `POST /v1/responses`
   - `GET /v1/models`
   - `POST /v1/embeddings`
 - Anthropic-compatible endpoints:
@@ -49,6 +50,14 @@ go run ./main.go check-usage -json
 # Diagnostics
 go run ./main.go debug --json
 ```
+
+## Responses API Notes
+
+- `POST /v1/responses` supports both:
+  - non-stream responses (`stream=false` or omitted)
+  - SSE streaming (`stream=true`)
+- `previous_response_id` is supported with an in-memory conversation store
+  (state is process-local and is not persisted across restarts).
 
 ## CLI Flags
 

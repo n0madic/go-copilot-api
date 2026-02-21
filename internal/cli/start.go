@@ -138,11 +138,13 @@ func runStart(args []string) int {
 	}
 
 	srv := server.New(st, copilotClient, ghClient)
+	listenAddr := net.JoinHostPort(bindAddr, strconv.Itoa(finalPort))
 	httpServer := &http.Server{
-		Addr:              net.JoinHostPort(bindAddr, strconv.Itoa(finalPort)),
+		Addr:              listenAddr,
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	slog.Info("Server listening", "url", "http://"+listenAddr)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fmt.Fprintf(os.Stderr, "server failed: %v\n", err)
 		return 1

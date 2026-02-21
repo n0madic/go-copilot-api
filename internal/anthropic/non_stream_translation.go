@@ -2,6 +2,7 @@ package anthropic
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/n0madic/go-copilot-api/internal/types"
@@ -137,6 +138,9 @@ func handleUserMessage(message types.AnthropicMessage) []types.Message {
 
 	for _, block := range toolResultBlocks {
 		toolUseID, _ := block["tool_use_id"].(string)
+		if strings.TrimSpace(toolUseID) == "" {
+			continue
+		}
 		content := mapContent(block["content"])
 		newMessages = append(newMessages, types.Message{Role: "tool", ToolCallID: toolUseID, Content: content})
 	}
@@ -177,18 +181,17 @@ func handleAssistantMessage(message types.AnthropicMessage) []types.Message {
 	allText := strings.Join(append(thinkingBlocks, textBlocks...), "\n\n")
 	if len(toolUse) > 0 {
 		toolCalls := make([]types.ToolCall, 0, len(toolUse))
-		for _, t := range toolUse {
+		for idx, t := range toolUse {
 			id, _ := t["id"].(string)
+			if id == "" {
+				id = "tool_call_" + strconv.Itoa(idx)
+			}
 			name, _ := t["name"].(string)
 			input := t["input"]
 			b, _ := json.Marshal(input)
 			toolCalls = append(toolCalls, types.ToolCall{ID: id, Type: "function", Function: types.ToolCallFn{Name: name, Arguments: string(b)}})
 		}
-		var content any
-		if allText != "" {
-			content = allText
-		}
-		return []types.Message{{Role: "assistant", Content: content, ToolCalls: toolCalls}}
+		return []types.Message{{Role: "assistant", Content: allText, ToolCalls: toolCalls}}
 	}
 	return []types.Message{{Role: "assistant", Content: mapContent(message.Content)}}
 }
@@ -257,11 +260,11 @@ func mapContent(content any) any {
 			}
 		}
 		if len(parts) == 0 {
-			return nil
+			return ""
 		}
 		return parts
 	default:
-		return nil
+		return ""
 	}
 }
 

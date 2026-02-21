@@ -64,3 +64,41 @@ func TestToolResultComesBeforeUserMessage(t *testing.T) {
 		t.Fatalf("expected second message to be user, got %s", translated.Messages[1].Role)
 	}
 }
+
+func TestAssistantToolUseWithoutTextKeepsEmptyStringContent(t *testing.T) {
+	payload := types.AnthropicMessagesPayload{
+		Model: "gpt-4o",
+		Messages: []types.AnthropicMessage{
+			{
+				Role: "assistant",
+				Content: []any{
+					map[string]any{
+						"type":  "tool_use",
+						"id":    "call_1",
+						"name":  "get_weather",
+						"input": map[string]any{"city": "Berlin"},
+					},
+				},
+			},
+		},
+		MaxTokens: 10,
+	}
+
+	translated := anthropic.TranslateToOpenAI(payload)
+	if len(translated.Messages) != 1 {
+		t.Fatalf("expected one translated message, got %d", len(translated.Messages))
+	}
+	msg := translated.Messages[0]
+	if msg.Role != "assistant" {
+		t.Fatalf("expected assistant role, got %q", msg.Role)
+	}
+	if msg.Content != "" {
+		t.Fatalf("expected empty string content instead of nil, got %#v", msg.Content)
+	}
+	if len(msg.ToolCalls) != 1 {
+		t.Fatalf("expected one tool call, got %d", len(msg.ToolCalls))
+	}
+	if msg.ToolCalls[0].ID == "" {
+		t.Fatalf("expected non-empty tool call id")
+	}
+}

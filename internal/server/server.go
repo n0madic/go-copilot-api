@@ -16,6 +16,7 @@ import (
 	"github.com/n0madic/go-copilot-api/internal/config"
 	"github.com/n0madic/go-copilot-api/internal/copilot"
 	gh "github.com/n0madic/go-copilot-api/internal/github"
+	"github.com/n0madic/go-copilot-api/internal/responses"
 	"github.com/n0madic/go-copilot-api/internal/sse"
 	"github.com/n0madic/go-copilot-api/internal/state"
 	"github.com/n0madic/go-copilot-api/internal/tokenizer"
@@ -24,13 +25,19 @@ import (
 )
 
 type Server struct {
-	state   *state.State
-	copilot *copilot.Client
-	github  *gh.Client
+	state         *state.State
+	copilot       *copilot.Client
+	github        *gh.Client
+	responseStore *responses.Store
 }
 
 func New(st *state.State, copilotClient *copilot.Client, githubClient *gh.Client) *Server {
-	return &Server{state: st, copilot: copilotClient, github: githubClient}
+	return &Server{
+		state:         st,
+		copilot:       copilotClient,
+		github:        githubClient,
+		responseStore: responses.NewStore(responses.DefaultStoreTTL, responses.DefaultStoreCapacity),
+	}
 }
 
 func (s *Server) Handler() http.Handler {
@@ -46,6 +53,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/v1/embeddings", s.handleEmbeddings)
 	mux.HandleFunc("/v1/messages", s.handleMessages)
 	mux.HandleFunc("/v1/messages/count_tokens", s.handleCountTokens)
+	mux.HandleFunc("/v1/responses", s.handleResponses)
 
 	return withMiddleware(mux)
 }
